@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+*.zip
+dist/
+build/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Private keys or credentials
+*.pem
+*.key
+secrets.json

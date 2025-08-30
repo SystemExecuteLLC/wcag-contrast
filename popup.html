@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WCAG Contrast Fixer</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>WCAG Contrast Fixer</h1>
+    </header>
+    
+    <main>
+      <div class="toggle-section">
+        <label class="switch">
+          <input type="checkbox" id="enableToggle" checked>
+          <span class="slider"></span>
+        </label>
+        <span class="toggle-label">Enable Contrast Fix</span>
+      </div>
+      
+      <div class="level-section">
+        <label for="levelSelect">Compliance Level:</label>
+        <select id="levelSelect">
+          <option value="AA" selected>WCAG AA (Recommended)</option>
+          <option value="AAA">WCAG AAA (Stricter)</option>
+        </select>
+      </div>
+      
+      <div class="toggle-section">
+        <label class="switch">
+          <input type="checkbox" id="forceToggle">
+          <span class="slider"></span>
+        </label>
+        <span class="toggle-label">Force High Contrast (B/W)</span>
+      </div>
+      
+      <div class="toggle-section">
+        <label class="switch">
+          <input type="checkbox" id="boldToggle">
+          <span class="slider"></span>
+        </label>
+        <span class="toggle-label">Force Bold Text</span>
+      </div>
+      
+      <div class="stats-section">
+        <h2>Current Page Stats</h2>
+        <div class="stats">
+          <div class="stat-item">
+            <span class="stat-label">Elements Fixed:</span>
+            <span class="stat-value" id="fixedCount">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Total Elements:</span>
+            <span class="stat-value" id="totalCount">0</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="info-section">
+        <details>
+          <summary>About WCAG Contrast</summary>
+          <div class="info-content">
+            <p><strong>WCAG AA:</strong></p>
+            <ul>
+              <li>Normal text: 4.5:1 ratio</li>
+              <li>Large text (18pt+): 3:1 ratio</li>
+            </ul>
+            <p><strong>WCAG AAA:</strong></p>
+            <ul>
+              <li>Normal text: 7:1 ratio</li>
+              <li>Large text (18pt+): 4.5:1 ratio</li>
+            </ul>
+          </div>
+        </details>
+      </div>
+    </main>
+    
+    <footer>
+      <button id="refreshBtn" class="btn-secondary">Refresh Page</button>
+    </footer>
+  </div>
+  
+  <script src="popup.js"></script>
+</body>
+</html>
