@@ -46,19 +46,22 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   }
 });
 
-chrome.commands.onCommand.addListener((command) => {
-  if (command === 'toggle-contrast-fix') {
-    chrome.storage.sync.get(['enabled'], (data) => {
-      const newEnabled = !data.enabled;
-      chrome.storage.sync.set({ enabled: newEnabled }, () => {
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-          if (tabs[0]) {
-            chrome.tabs.sendMessage(tabs[0].id, {
-              action: newEnabled ? 'enable' : 'disable'
-            });
-          }
+// Only add command listener if chrome.commands is available
+if (chrome.commands && chrome.commands.onCommand) {
+  chrome.commands.onCommand.addListener((command) => {
+    if (command === 'toggle-contrast-fix') {
+      chrome.storage.sync.get(['enabled'], (data) => {
+        const newEnabled = !data.enabled;
+        chrome.storage.sync.set({ enabled: newEnabled }, () => {
+          chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            if (tabs[0]) {
+              chrome.tabs.sendMessage(tabs[0].id, {
+                action: newEnabled ? 'enable' : 'disable'
+              });
+            }
+          });
         });
       });
-    });
-  }
-});
+    }
+  });
+}

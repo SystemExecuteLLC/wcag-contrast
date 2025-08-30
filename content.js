@@ -216,25 +216,85 @@
     document.body.classList.remove('wcag-force-contrast');
   }
 
-  function handleMutations(mutations) {
-    if (!enabled) return;
+  // Debounce mechanism for performance
+  let mutationQueue = [];
+  let processingScheduled = false;
+  
+  function processMutationQueue() {
+    if (!enabled) {
+      mutationQueue = [];
+      processingScheduled = false;
+      return;
+    }
     
     const elementsToProcess = new Set();
     
-    mutations.forEach(mutation => {
-      if (mutation.type === 'childList') {
-        mutation.addedNodes.forEach(node => {
-          if (node.nodeType === Node.ELEMENT_NODE) {
-            elementsToProcess.add(node);
-            node.querySelectorAll('*').forEach(child => elementsToProcess.add(child));
+    // Process only the mutations in queue
+    for (const mutations of mutationQueue) {
+      for (const mutation of mutations) {
+        if (mutation.type === 'childList') {
+          // Only process actual element nodes that were added
+          for (const node of mutation.addedNodes) {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+              elementsToProcess.add(node);
+              // Only add direct children, not all descendants
+              const children = node.querySelectorAll('*');
+              // Limit to first 100 children to prevent hanging
+              const limit = Math.min(children.length, 100);
+              for (let i = 0; i < limit; i++) {
+                elementsToProcess.add(children[i]);
+              }
+            }
           }
-        });
-      } else if (mutation.type === 'attributes') {
-        elementsToProcess.add(mutation.target);
+        } else if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+          // Only process style changes
+          elementsToProcess.add(mutation.target);
+        }
       }
-    });
+    }
     
-    elementsToProcess.forEach(adjustElementContrast);
+    // Clear queue
+    mutationQueue = [];
+    processingScheduled = false;
+    
+    // Process elements in batches to prevent blocking
+    const elements = Array.from(elementsToProcess);
+    const batchSize = 50;
+    let index = 0;
+    
+    function processBatch() {
+      const end = Math.min(index + batchSize, elements.length);
+      for (let i = index; i < end; i++) {
+        adjustElementContrast(elements[i]);
+      }
+      index = end;
+      
+      if (index < elements.length) {
+        requestAnimationFrame(processBatch);
+      }
+    }
+    
+    if (elements.length > 0) {
+      requestAnimationFrame(processBatch);
+    }
+  }
+  
+  function handleMutations(mutations) {
+    if (!enabled) return;
+    
+    // Add to queue
+    mutationQueue.push(mutations);
+    
+    // Schedule processing if not already scheduled
+    if (!processingScheduled) {
+      processingScheduled = true;
+      // Use requestIdleCallback for non-critical updates, with requestAnimationFrame as fallback
+      if (window.requestIdleCallback) {
+        requestIdleCallback(() => processMutationQueue(), { timeout: 100 });
+      } else {
+        requestAnimationFrame(() => processMutationQueue());
+      }
+    }
   }
 
   // Message listener for popup communication
@@ -351,14 +411,16 @@
     processPage();
   }
 
-  // Observe changes
+  // Observe changes with optimized configuration
   const observer = new MutationObserver(handleMutations);
   if (document.body) {
     observer.observe(document.body, {
       childList: true,
       subtree: true,
       attributes: true,
-      attributeFilter: ['style', 'class']
+      attributeFilter: ['style'], // Only watch style changes, not class
+      attributeOldValue: false,
+      characterData: false
     });
   } else {
     // Wait for body to exist
@@ -369,7 +431,9 @@
           childList: true,
           subtree: true,
           attributes: true,
-          attributeFilter: ['style', 'class']
+          attributeFilter: ['style'],
+          attributeOldValue: false,
+          characterData: false
         });
         processPage();
       }
