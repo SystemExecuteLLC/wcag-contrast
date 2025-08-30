@@ -4,9 +4,7 @@
   "version": "1.0.0",
   "description": "Automatically fixes text contrast to meet WCAG 2.1 AA standards",
   "permissions": [
-    "storage",
-    "activeTab",
-    "scripting"
+    "storage"
   ],
   "host_permissions": [
     "<all_urls>"
