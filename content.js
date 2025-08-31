@@ -12,6 +12,7 @@
   let level = 'AA';
   let forceMode = false;
   let forceBold = false;
+  let observer = null;
   const originalStyles = new WeakMap();
 
   function srgbToLinear(val) {
@@ -114,6 +115,9 @@
   function adjustElementContrast(element) {
     if (!shouldProcessElement(element)) return;
     
+    // Skip if already adjusted to prevent flashing
+    if (element.dataset.wcagAdjusted === 'true') return;
+    
     const style = window.getComputedStyle(element);
     const fgColor = parseColor(style.color);
     if (!fgColor) return;
@@ -137,30 +141,47 @@
     
     const bgLuminance = getRelativeLuminance(bgColor);
     
+    // Determine what color to use
+    let newColor;
     if (forceMode) {
       // Force high contrast mode
-      if (bgLuminance > 0.5) {
-        // Light background - use black text
-        element.style.setProperty('color', '#000000', 'important');
-        element.style.setProperty('text-shadow', 'none', 'important');
-      } else {
-        // Dark background - use white text
-        element.style.setProperty('color', '#ffffff', 'important');
-        element.style.setProperty('text-shadow', 'none', 'important');
-      }
+      newColor = bgLuminance > 0.5 ? '#000000' : '#ffffff';
     } else {
       // Smart adjustment based on contrast needs
       const useWhite = bgLuminance < 0.5;
-      element.style.setProperty('color', useWhite ? '#ffffff' : '#000000', 'important');
-      element.style.setProperty('text-shadow', 'none', 'important');
+      newColor = useWhite ? '#ffffff' : '#000000';
     }
+    
+    // Temporarily disconnect observer to prevent feedback loop
+    if (observer) {
+      observer.disconnect();
+    }
+    
+    // Apply styles
+    element.style.setProperty('color', newColor, 'important');
+    element.style.setProperty('text-shadow', 'none', 'important');
     
     // Apply bold if force bold is enabled
     if (forceBold) {
       element.style.setProperty('font-weight', '700', 'important');
     }
     
+    // Mark as adjusted
     element.dataset.wcagAdjusted = 'true';
+    
+    // Reconnect observer after a brief delay
+    if (observer && document.body) {
+      setTimeout(() => {
+        observer.observe(document.body, {
+          childList: true,
+          subtree: true,
+          attributes: true,
+          attributeFilter: ['style'],
+          attributeOldValue: false,
+          characterData: false
+        });
+      }, 0);
+    }
   }
 
   function restoreElement(element) {
@@ -236,19 +257,24 @@
           // Only process actual element nodes that were added
           for (const node of mutation.addedNodes) {
             if (node.nodeType === Node.ELEMENT_NODE) {
-              elementsToProcess.add(node);
-              // Only add direct children, not all descendants
-              const children = node.querySelectorAll('*');
-              // Limit to first 100 children to prevent hanging
-              const limit = Math.min(children.length, 100);
-              for (let i = 0; i < limit; i++) {
-                elementsToProcess.add(children[i]);
+              // Skip if already adjusted
+              if (node.dataset?.wcagAdjusted !== 'true') {
+                elementsToProcess.add(node);
+                // Only add direct children, not all descendants
+                const children = node.querySelectorAll('*:not([data-wcag-adjusted="true"])');
+                // Limit to first 100 children to prevent hanging
+                const limit = Math.min(children.length, 100);
+                for (let i = 0; i < limit; i++) {
+                  elementsToProcess.add(children[i]);
+                }
               }
             }
           }
         } else if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
-          // Only process style changes
-          elementsToProcess.add(mutation.target);
+          // Only process style changes if not already adjusted
+          if (mutation.target.dataset?.wcagAdjusted !== 'true') {
+            elementsToProcess.add(mutation.target);
+          }
         }
       }
     }
@@ -412,7 +438,7 @@
   }
 
   // Observe changes with optimized configuration
-  const observer = new MutationObserver(handleMutations);
+  observer = new MutationObserver(handleMutations);
   if (document.body) {
     observer.observe(document.body, {
       childList: true,
@@ -427,6 +453,7 @@
     const bodyObserver = new MutationObserver(() => {
       if (document.body) {
         bodyObserver.disconnect();
+        observer = new MutationObserver(handleMutations);
         observer.observe(document.body, {
           childList: true,
           subtree: true,

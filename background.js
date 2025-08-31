@@ -31,20 +31,8 @@ chrome.action.onClicked.addListener((tab) => {
   });
 });
 
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (changeInfo.status === 'complete') {
-    chrome.storage.sync.get(['enabled', 'level'], (data) => {
-      if (data.enabled !== false) {
-        chrome.scripting.executeScript({
-          target: { tabId: tabId, allFrames: true },
-          files: ['content.js']
-        }).catch(() => {
-          
-        });
-      }
-    });
-  }
-});
+// Content script is now automatically injected via manifest.json
+// No need to manually inject it on tab updates
 
 // Only add command listener if chrome.commands is available
 if (chrome.commands && chrome.commands.onCommand) {
